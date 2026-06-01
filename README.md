@@ -3,6 +3,14 @@ Script feito por um *construtor civil com* auxilio da **IA Gemini**
 
 Em um momento da minha vida me fiz uma questão sobre os números primos e desde então utilizo a IA no Google Colab pra tentar coletar primos com base em heurísticas que estou tentando criar.
 
+## Propriedade Intelectual e Registro
+
+O presente ecossistema computacional encontra-se devidamente registrado junto ao Instituto Nacional da Propriedade Industrial (INPI):
+
+* **Patente de Invenção (PI)**: BR 10 2026 004136 0
+* **Registro de Programa de Computador (RPC)**: 512026001601-0
+  * **Objeto**: Proteção do código-fonte e direitos autorais do software 2N49R1M3.
+
 A idéia é que gerando números no formato: **p * p#n até p²** e usando N e a distância de seus fatores p-q com base na *Teoria dos Numeros a densidade média prevista para o local de busca*, o objetivo é ajustar a busca em um porcentagem em relação a N p * q.
 
 ## É uma tentativa de uma pessoa simples e comum testar uma curiosidade com o uso da IA Gemini eu cheguei a esse resultado:
