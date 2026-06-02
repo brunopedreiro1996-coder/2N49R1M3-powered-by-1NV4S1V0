@@ -1,0 +1,165 @@
+%%writefile 2N49R1M3.cpp
+#include <iostream>
+#include <fstream>
+#include <gmpxx.h>
+#include <vector>
+#include <unordered_set>
+#include <nlohmann/json.hpp>
+#include <thread>
+#include <mutex>
+#include <csignal>
+#include <atomic>
+#include <map>
+#include <random>
+#include <cmath>
+#include <algorithm>
+
+using json = nlohmann::json;
+std::atomic<bool> keep_running(true);
+
+void signal_handler(int signum) {
+    std::cout << "\n[SINAL] Salvando e finalizando motor..." << std::endl;
+    keep_running = false;
+}
+
+class AdaptiveEngine30n {
+private:
+    std::mutex mtx;
+    std::unordered_set<std::string> registry;
+    std::map<int, std::vector<mpz_class>> seed_bins;
+    std::map<int, double> mag_weights;
+    json logs = json::array();
+
+    const double PHI = 1.61803398875;
+    const double SNAP_FAST = 0.05;
+    const double SNAP_DEEP = 0.001;
+
+    void save_memory() {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::ofstream f("cpi_storage.json");
+        if (f.is_open()) {
+            f << logs.dump(4);
+            f.close();
+        }
+    }
+
+    void load_memory() {
+        std::ifstream f("cpi_storage.json");
+        if (f.is_open()) {
+            json data;
+            try {
+                f >> data;
+                for (auto& entry : data) {
+                    if (entry.contains("v")) {
+                        std::string val = entry["v"].get<std::string>();
+                        mpz_class p(val);
+                        seed_bins[val.length()].push_back(p);
+                        registry.insert(val);
+                        mag_weights[val.length()] += 1.0;
+                    }
+                }
+                logs = data;
+            } catch (...) {}
+        }
+        if (registry.empty()) {
+            for(auto v : {2, 3, 5, 7, 11, 13, 17, 19, 23, 29}) seed_bins[1].push_back(mpz_class(v));
+        }
+    }
+
+    bool has_perfect_symmetry(const mpz_class& cand) {
+        std::string b = cand.get_str(2);
+        size_t c10 = 0, c01 = 0;
+        for(size_t i=0; i < b.length()-1; ++i) {
+            if(b[i]=='1' && b[i+1]=='0') c10++;
+            if(b[i]=='0' && b[i+1]=='1') c01++;
+        }
+        return (c10 > 0) && (c10 == c01);
+    }
+
+    bool is_prime(const mpz_class& c) {
+        if (c.get_str().length() > 100 && !has_perfect_symmetry(c)) return false;
+        return mpz_probab_prime_p(c.get_mpz_t(), 25) > 0;
+    }
+
+    mpz_class get_adaptive_seed() {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (mag_weights.empty()) return seed_bins[1][rand() % seed_bins[1].size()];
+        std::vector<int> active_mags; std::vector<double> weights;
+        for(auto const& [mag, w] : mag_weights) { active_mags.push_back(mag); weights.push_back(w); }
+        std::discrete_distribution<int> dist(weights.begin(), weights.end());
+        static std::mt19937 gen(time(0));
+        int mag_sel = active_mags[dist(gen)];
+        return seed_bins[mag_sel][rand() % seed_bins[mag_sel].size()];
+    }
+
+    void record_hit(const mpz_class& cand, const std::string& type, const mpz_class& parent) {
+        std::string sv = cand.get_str();
+        int mag = sv.length();
+        std::lock_guard<std::mutex> lock(mtx);
+        if (registry.find(sv) == registry.end()) {
+            registry.insert(sv);
+            seed_bins[mag].push_back(cand);
+            mag_weights[mag] += 10.0;
+            logs.push_back({{"v", sv}, {"type", type}, {"mag", mag}, {"parent", parent.get_str()}});
+            if (mag > 50) std::cout << "[HIT-30n] " << type << " | Mag: " << mag << " | Parent: " << parent.get_str().substr(0,8) << std::endl;
+        }
+    }
+
+public:
+    AdaptiveEngine30n() { load_memory(); }
+
+    void run_cycle() {
+        std::mt19937 gen(std::random_device{}());
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+        long current_delta = 300;
+
+        while (keep_running) {
+            mpz_class p = get_adaptive_seed();
+            mpz_class anchor;
+            std::string type;
+            double r = dis(gen);
+
+            if (r < 0.15 && registry.size() > 5) {
+                mpz_class q = get_adaptive_seed();
+                anchor = p * q;
+                type = "symbiotic_30n";
+            } else if (r < 0.5) {
+                unsigned long E = 100 + (gen() % 8000);
+                mpz_class base_exp; mpz_pow_ui(base_exp.get_mpz_t(), mpz_class(2).get_mpz_t(), E);
+                anchor = p * base_exp;
+                type = "expansion_30n";
+            } else {
+                mpz_class pn = 1, pg = 2;
+                int depth = 5 + (gen() % 40);
+                for(int i=0; i<depth; ++i) { pn *= pg; mpz_nextprime(pg.get_mpz_t(), pg.get_mpz_t()); }
+                anchor = p * pn;
+                type = "harmonic_30n";
+            }
+
+            mpz_class base_30 = (anchor / 30) * 30;
+
+            for (long i = 0; i <= current_delta && keep_running; ++i) {
+                mpz_class n_base = base_30 + (i * 30);
+                mpz_class c1 = n_base - 1, c2 = n_base + 1;
+
+                if (is_prime(c1)) record_hit(c1, type, p);
+                if (is_prime(c2)) record_hit(c2, type, p);
+            }
+            if (gen() % 150 == 0) save_memory();
+        }
+    }
+
+    void start() {
+        std::vector<std::thread> threads;
+        int n = std::thread::hardware_concurrency();
+        for (int i = 0; i < n; ++i) threads.emplace_back(&AdaptiveEngine30n::run_cycle, this);
+        for (auto& t : threads) t.join();
+    }
+};
+
+int main() {
+    signal(SIGINT, signal_handler);
+    AdaptiveEngine30n engine;
+    engine.start();
+    return 0;
+}
