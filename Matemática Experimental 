@@ -19484,99 +19484,12 @@
       ]
     },
     {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "8d1c9648"
-      },
-      "source": [
-        "### 🐙 Sincronia com GitHub: Análise do Motor 1NV4S1V0\n",
-        "Este script conecta ao seu repositório para ler a lógica de atualização heurística 30n."
-      ]
-    },
-    {
-      "cell_type": "code",
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "1eecc207",
-        "outputId": "b2bb746f-f24a-4603-edc8-88f76bcc6732"
-      },
-      "source": [
-        "import requests\n",
-        "import json\n",
-        "import os\n",
-        "\n",
-        "# Baseado no seu contexto, tentando localizar a lógica do motor\n",
-        "github_user = \"69n73\" # Nome detectado em sessões anteriores ou similar\n",
-        "repo_name = \"2N49R1M3\"\n",
-        "\n",
-        "def analyze_github_motor(user, repo):\n",
-        "    print(f\"📡 Conectando ao motor 1NV4S1V0 em {user}/{repo}...\")\n",
-        "\n",
-        "    # Tentando buscar o arquivo de atualização heurística 30n\n",
-        "    files_to_check = [\"30n_heuristica.cpp\", \"motor_1NV4S1V0.hpp\", \"README.md\"]\n",
-        "\n",
-        "    for filename in files_to_check:\n",
-        "        url = f\"https://raw.githubusercontent.com/{user}/{repo}/main/{filename}\"\n",
-        "        resp = requests.get(url)\n",
-        "        if resp.status_code == 200:\n",
-        "            print(f\"✅ Arquivo {filename} localizado!\")\n",
-        "            content = resp.text\n",
-        "            if \"parent\" in content or \"30\" in content:\n",
-        "                print(\"🔍 Lógica de parentesco 30n identificada no código.\")\n",
-        "                # Extração simulada da regra de torque\n",
-        "                return True\n",
-        "\n",
-        "    print(\"⚠️ Não foi possível baixar diretamente. Usando lógica de torque 30n padrão do notebook.\")\n",
-        "    return False\n",
-        "\n",
-        "analyze_github_motor(github_user, repo_name)"
-      ],
-      "execution_count": null,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "📡 Conectando ao motor 1NV4S1V0 em 69n73/2N49R1M3...\n",
-            "⚠️ Não foi possível baixar diretamente. Usando lógica de torque 30n padrão do notebook.\n"
-          ]
-        },
-        {
-          "output_type": "execute_result",
-          "data": {
-            "text/plain": [
-              "False"
-            ]
-          },
-          "metadata": {},
-          "execution_count": 28
-        }
-      ]
-    },
-    {
       "cell_type": "code",
       "execution_count": null,
       "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "15f441bb",
-        "outputId": "85d4797c-b552-420d-8779-f20727775168"
+        "id": "15f441bb"
       },
-      "outputs": [
-        {
-          "name": "stdout",
-          "output_type": "stream",
-          "text": [
-            "--- Planejamento de Expansão 1000-D ---\n",
-            "💎 Par Simbiótico Ideal: 18 dgts + 982 dgts\n",
-            "   Semente A: 132653114897873279...\n",
-            "   Semente B: 43363822595264395392...\n"
-          ]
-        }
-      ],
+      "outputs": [],
       "source": [
         "# @title 🚀 Iniciando Alvo 1000-D (Sincronia Simbiótica)\n",
         "import json\n",
@@ -19683,6 +19596,7 @@
         "colab": {
           "base_uri": "https://localhost:8080/"
         },
+        "collapsed": true,
         "id": "241dccde",
         "outputId": "c1c47bfd-d15e-4eee-ec0b-bfab4fddafe9"
       },
@@ -22405,7 +22319,7 @@
     "colab": {
       "provenance": [],
       "mount_file_id": "1X3_vA95a5w7DEBSyg0DEu5Aag09GfC62",
-      "authorship_tag": "ABX9TyPG4yOvKXGy78KxqVsaJ3sE",
+      "authorship_tag": "ABX9TyO6JCMJoCZT+DwOJKsPFbuS",
       "include_colab_link": true
     },
     "kernelspec": {
@@ -22799,7 +22713,7 @@
             "layout": "IPY_MODEL_4efb1fdfd4f34962bff650377c2013c5",
             "placeholder": "​",
             "style": "IPY_MODEL_621a88224f8b499683363f43a8f0fdea",
-            "value": "  1%"
+            "value": "  4%"
           }
         },
         "9ce6ea8d70344e908c1f9236fe0fa322": {
@@ -22823,7 +22737,7 @@
             "min": 0,
             "orientation": "horizontal",
             "style": "IPY_MODEL_885a04cf776e45d1b084aeb9b2606ae9",
-            "value": 9093
+            "value": 26598
           }
         },
         "b4ed4466d8c34bd690af583f174c363c": {
@@ -22844,7 +22758,7 @@
             "layout": "IPY_MODEL_b970df55cae743fcad6bf07946319eef",
             "placeholder": "​",
             "style": "IPY_MODEL_9a5ec960362e4d9ba1e2433a4b90a696",
-            "value": " 9093/740497 [05:49&lt;13:48:20, 14.72it/s]"
+            "value": " 26598/740497 [18:14&lt;11:08:02, 17.81it/s]"
           }
         },
         "5e5b84f670f24fa0ae73b89278146a53": {
