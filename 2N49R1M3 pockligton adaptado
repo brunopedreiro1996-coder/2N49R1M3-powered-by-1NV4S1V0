@@ -1,0 +1,160 @@
+# @title ```2N49R1M3 Pockligton adaptado```
+%%writefile 2N49R1M3.cpp
+#include <iostream>
+#include <fstream>
+#include <gmpxx.h>
+#include <vector>
+#include <unordered_set>
+#include <nlohmann/json.hpp>
+#include <thread>
+#include <mutex>
+#include <csignal>
+#include <atomic>
+#include <map>
+#include <random>
+#include <cmath>
+#include <algorithm>
+
+using json = nlohmann::json;
+std::atomic<bool> keep_running(true);
+
+void signal_handler(int signum) {
+    std::cout << "\n[SINAL] Interrupção detectada. Salvando estado..." << std::endl;
+    keep_running = false;
+}
+
+class AdaptiveEngine2N49R1M3 {
+private:
+    std::mutex mtx;
+    std::unordered_set<std::string> registry;
+    std::map<int, std::vector<mpz_class>> seed_bins;
+    std::map<int, double> mag_weights;
+    json logs = json::array();
+
+    void save_memory() {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::ofstream f("2n49r1m3_memory.json");
+        if (f.is_open()) {
+            f << logs.dump(4);
+            f.close();
+        }
+    }
+
+    void load_memory() {
+        std::ifstream f("2n49r1m3_memory.json");
+        if (f.is_open()) {
+            json data;
+            try {
+                f >> data;
+                for (auto& entry : data) {
+                    std::string val = entry["v"].get<std::string>();
+                    mpz_class p(val);
+                    int mag = val.length();
+                    seed_bins[mag].push_back(p);
+                    registry.insert(val);
+                    mag_weights[mag] += 1.0;
+                }
+                logs = data;
+                std::cout << "[DYNAMIC] " << registry.size() << " sementes carregadas do arquivo de memória." << std::endl;
+            } catch (...) { std::cout << "[WARN] Memória vazia ou corrompida." << std::endl; }
+        }
+        
+        // Fallback: Se não houver histórico, usa as sementes primordiais para iniciar o sistema
+        if (registry.empty()) {
+            std::cout << "[COLD START] Iniciando com sementes primordiais estáticas..." << std::endl;
+            for(auto v : {233, 997, 15485863}) {
+                mpz_class m(v);
+                std::string s = m.get_str();
+                seed_bins[s.length()].push_back(m);
+                registry.insert(s);
+                mag_weights[s.length()] = 1.0;
+            }
+        }
+    }
+
+    mpz_class get_adaptive_seed(std::mt19937& gen) {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::vector<int> mags;
+        std::vector<double> weights;
+        for(auto const& [m, w] : mag_weights) {
+            mags.push_back(m);
+            weights.push_back(w);
+        }
+        std::discrete_distribution<int> dist(weights.begin(), weights.end());
+        int chosen_mag = mags[dist(gen)];
+        auto& bin = seed_bins[chosen_mag];
+        return bin[gen() % bin.size()];
+    }
+
+    bool pocklington_lite(const mpz_class& N, const mpz_class& F) {
+        if (N < 2) return false;
+        if (mpz_probab_prime_p(N.get_mpz_t(), 25) == 0) return false;
+        return (F > sqrt(N));
+    }
+
+    void record_hit(const mpz_class& cand, const std::string& type, const mpz_class& parent, const mpz_class& F) {
+        std::string sv = cand.get_str();
+        int mag = sv.length();
+        std::lock_guard<std::mutex> lock(mtx);
+        if (registry.find(sv) == registry.end()) {
+            registry.insert(sv);
+            seed_bins[mag].push_back(cand);
+            mag_weights[mag] += 5.0;
+            logs.push_back({{"v", sv}, {"type", type}, {"mag", mag}, {"parent", parent.get_str()}, {"F", F.get_str()}});
+            std::cout << "[HIT] " << type << " | Mag: " << mag << " | Node: " << sv.substr(0,10) << "..." << std::endl;
+        }
+    }
+
+public:
+    AdaptiveEngine2N49R1M3() { load_memory(); }
+
+    void run_cycle() {
+        std::mt19937 gen(std::random_device{}());
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+
+        while (keep_running) {
+            mpz_class p = get_adaptive_seed(gen);
+            mpz_class anchor, F;
+            std::string type;
+            double r = dis(gen);
+
+            if (r < 0.2) {
+                mpz_class q = get_adaptive_seed(gen);
+                anchor = p * q; F = (p > q) ? p : q; type = "symbiotic_p*q";
+            } else if (r < 0.6) {
+                unsigned long E = 100 + (gen() % 1000);
+                mpz_class base_exp; mpz_pow_ui(base_exp.get_mpz_t(), mpz_class(2).get_mpz_t(), E);
+                anchor = p * base_exp; F = base_exp; type = "expansion_p*2E";
+            } else {
+                mpz_class pn = 1, pg = 2;
+                for(int i=0; i<15; ++i) { pn *= pg; mpz_nextprime(pg.get_mpz_t(), pg.get_mpz_t()); }
+                anchor = p * pn; F = pn; type = "harmonic_p*pn";
+            }
+
+            mpz_class base_30 = (anchor / 30) * 30;
+            for (int i = -5; i <= 5 && keep_running; ++i) {
+                mpz_class c = base_30 + (i * 30) + 1;
+                if (pocklington_lite(c, F)) record_hit(c, type, p, F);
+                c = base_30 + (i * 30) - 1;
+                if (pocklington_lite(c, F)) record_hit(c, type, p, F);
+            }
+            if (gen() % 50 == 0) save_memory();
+        }
+        save_memory();
+    }
+
+    void start() {
+        int n = std::thread::hardware_concurrency();
+        std::cout << "[SYSTEM] Motor Ativo | Threads: " << n << std::endl;
+        std::vector<std::thread> threads;
+        for (int i = 0; i < n; ++i) threads.emplace_back(&AdaptiveEngine2N49R1M3::run_cycle, this);
+        for (auto& t : threads) t.join();
+    }
+};
+
+int main() {
+    signal(SIGINT, signal_handler);
+    AdaptiveEngine2N49R1M3 engine;
+    engine.start();
+    return 0;
+}
